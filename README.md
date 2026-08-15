@@ -14,9 +14,9 @@ Targets exactly these hardware devices (version 1.0.0):
 | Device | USB ID | What LiquidCam does |
 | --- | --- | --- |
 | NZXT Smart Device V1 | `1e71:1714` | Fan speed control on all three channels, fan RPM / voltage / current / control mode, noise level, LED accessory detection, all 15 firmware lighting presets |
-| NZXT E850 | `7793:2500` | Temperature, fan speed, per-rail voltage / current / power, total output, firmware version (E500 `5911` and E650 `5912` are recognised too) |
+| NZXT E Series PSU | `7793:2500` | Temperature, fan speed, per-rail voltage / current / power, total output, firmware version (E500 `5911` and E650 `5912` are recognised too) |
 
-Feel free to put in a request if this project seems useful to you, I'd love to add more device compatibility!
+Feel free to put in a request if this project looks useful to you, I'd love to add more device compatibility!
 
 ## Why it is cheap on CPU
 
