@@ -1,10 +1,11 @@
 # LiquidCam
 
-A native C++ replacement for NZXT CAM, built on the same device protocols as
+A WIP native C++ replacement for NZXT CAM, built on the same device protocols as
 [liquidctl](https://github.com/liquidctl/liquidctl) and wrapped in a Qt widget
 interface that takes inspiration from CAM's layout.
 
-<img style="width: 80%; height: auto;" alt="image" src="https://github.com/user-attachments/assets/91f2b91f-4409-4a8a-95ba-e1879fa328c7" />
+<img style="width: 80%; height: auto;" alt="image" src="https://github.com/user-attachments/assets/596ed010-5f17-4b48-8846-635a93a4f871" />
+
 
 I made this as a way to get rid of NZXT CAM, which is wildly expensive on the CPU. The main goal was to get PSU logging so that my PSU didn't ramp up to 100% every hour or so.
 LiquidCam sits between 8-12MB of RAM and 0% CPU while in the tray. When maximized, will sit between 0.1% and 0.5% CPU (tested on 7800X3D)
