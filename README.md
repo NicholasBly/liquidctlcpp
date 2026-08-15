@@ -4,6 +4,8 @@ A native C++ replacement for NZXT CAM, built on the same device protocols as
 [liquidctl](https://github.com/liquidctl/liquidctl) and wrapped in a Qt widget
 interface that takes inspiration from CAM's layout.
 
+<img style="width: 80%; height: auto;" alt="image" src="https://github.com/user-attachments/assets/91f2b91f-4409-4a8a-95ba-e1879fa328c7" />
+
 I made this as a way to get rid of NZXT CAM, which is wildly expensive on the CPU. The main goal was to get PSU logging so that my PSU didn't ramp up to 100% every hour or so.
 LiquidCam sits between 8-12MB of RAM and 0% CPU while in the tray. When maximized, will sit between 0.1% and 0.5% CPU (tested on 7800X3D)
 
@@ -14,7 +16,7 @@ Targets exactly these hardware devices (version 1.0.0):
 | Device | USB ID | What LiquidCam does |
 | --- | --- | --- |
 | NZXT Smart Device V1 | `1e71:1714` | Fan speed control on all three channels, fan RPM / voltage / current / control mode, noise level, LED accessory detection, all 15 firmware lighting presets |
-| NZXT E Series PSU | `7793:2500` | Temperature, fan speed, per-rail voltage / current / power, total output, firmware version (E500 `5911` and E650 `5912` are recognised too) |
+| NZXT E Series PSU | `7793:2500` | Temperature, fan speed control, power-on hours, per-rail voltage / current / power, total output, firmware version (E500 `5911` and E650 `5912` are recognised too) |
 
 Feel free to put in a request if this project looks useful to you, I'd love to add more device compatibility!
 
