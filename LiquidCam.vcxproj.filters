@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <ItemGroup>
+    <Filter Include="core">
+      <UniqueIdentifier>{11111111-1111-4111-8111-111111111111}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ui">
+      <UniqueIdentifier>{22222222-2222-4222-8222-222222222222}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="app">
+      <UniqueIdentifier>{33333333-3333-4333-8333-333333333333}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resources">
+      <UniqueIdentifier>{44444444-4444-4444-8444-444444444444}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs">
+      <UniqueIdentifier>{55555555-5555-4555-8555-555555555555}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\app\Settings.cpp">
+      <Filter>app</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\DeviceManager.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\HidDevice.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\SeasonicEPsu.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\SmartDeviceV1.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\TempMonitor.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\FanCurveWidget.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\MainWindow.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\Theme.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="src\app\Settings.h">
+      <Filter>app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MsvcCompat.h" />
+    <ClInclude Include="src\core\FanCurve.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\HidDevice.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Pmbus.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\SeasonicEPsu.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\SmartDeviceV1.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\TempMonitor.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Types.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ui\Theme.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+  </ItemGroup>
+
+  <ItemGroup>
+    <CustomBuild Include="src\core\DeviceManager.h">
+      <Filter>core</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\ui\MainWindow.h">
+      <Filter>ui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\ui\FanCurveWidget.h">
+      <Filter>ui</Filter>
+    </CustomBuild>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ResourceCompile Include="src\app.rc">
+      <Filter>resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="src\app.ico">
+      <Filter>resources</Filter>
+    </None>
+    <None Include="README.md">
+      <Filter>docs</Filter>
+    </None>
+    <None Include="docs\PROTOCOL_NOTES.md">
+      <Filter>docs</Filter>
+    </None>
+  </ItemGroup>
+
+</Project>

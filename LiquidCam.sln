@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.30000.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LiquidCam", "LiquidCam.vcxproj", "{6A1F2C3D-4B5E-4A78-9C1D-2E3F4A5B6C7D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6A1F2C3D-4B5E-4A78-9C1D-2E3F4A5B6C7D}.Debug|x64.ActiveCfg = Debug|x64
+		{6A1F2C3D-4B5E-4A78-9C1D-2E3F4A5B6C7D}.Debug|x64.Build.0 = Debug|x64
+		{6A1F2C3D-4B5E-4A78-9C1D-2E3F4A5B6C7D}.Release|x64.ActiveCfg = Release|x64
+		{6A1F2C3D-4B5E-4A78-9C1D-2E3F4A5B6C7D}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D9E8C7B6-A5F4-4321-8765-1234ABCD5678}
+	EndGlobalSection
+EndGlobal

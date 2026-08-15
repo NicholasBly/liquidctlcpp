@@ -1,0 +1,204 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{6A1F2C3D-4B5E-4A78-9C1D-2E3F4A5B6C7D}</ProjectGuid>
+    <RootNamespace>LiquidCam</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <!-- v145 is the Visual Studio 2026 toolset. If the project is opened in an
+       older Visual Studio the default toolset of that install is used instead,
+       so the same file builds in 2019/2022 without editing. -->
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset Condition="'$(PlatformToolset)' == '' And Exists('$(VCTargetsPath)\Platforms\$(Platform)\PlatformToolsets\v145')">v145</PlatformToolset>
+    <PlatformToolset Condition="'$(PlatformToolset)' == ''">$(DefaultPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+
+  <!-- Qt 5.14.2 location. The QTDIR environment variable wins if it is set. -->
+  <PropertyGroup Label="UserMacros">
+    <QtDir Condition="'$(QTDIR)' != ''">$(QTDIR)</QtDir>
+    <QtDir Condition="'$(QtDir)' == ''">C:\Qt\Qt5.14.2\5.14.2\msvc2017_64</QtDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)build\obj\$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>LiquidCam</TargetName>
+    <LinkIncremental Condition="'$(Configuration)' == 'Release'">false</LinkIncremental>
+  </PropertyGroup>
+
+  <!-- ================= common compiler / linker settings ================= -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus /Zc:inline %(AdditionalOptions)</AdditionalOptions>
+      <!-- Puts Qt 5's checked-array-iterator macros back to their portable
+           form; the MSVC stdext extension they rely on no longer exists.
+           See src/MsvcCompat.h. -->
+      <ForcedIncludeFiles>MsvcCompat.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(IntDir);$(QtDir)\include;$(QtDir)\include\QtCore;$(QtDir)\include\QtGui;$(QtDir)\include\QtWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;WIN32_LEAN_AND_MEAN;NOMINMAX;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING;_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>$(QtDir)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>setupapi.lib;hid.lib;advapi32.lib;user32.lib;shell32.lib;ole32.lib;oleaut32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+
+  <!-- ============================== Debug ============================== -->
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Debug'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- ============================= Release ============================= -->
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Release'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PreprocessorDefinitions>NDEBUG;QT_NO_DEBUG;QT_NO_DEBUG_OUTPUT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- Release keeps a PDB: mixing a Debug build against Qt's msvc2017
+           debug libraries is the riskier combination, so debug the optimised
+           build instead. -->
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Message>Copying the Qt runtime next to LiquidCam.exe</Message>
+      <Command>if exist "$(QtDir)\bin\windeployqt.exe" "$(QtDir)\bin\windeployqt.exe" --release --no-translations --no-system-d3d-compiler --no-opengl-sw --no-compiler-runtime "$(TargetPath)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+
+  <!-- =========================== source files =========================== -->
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\app\Settings.cpp" />
+    <ClCompile Include="src\core\DeviceManager.cpp" />
+    <ClCompile Include="src\core\HidDevice.cpp" />
+    <ClCompile Include="src\core\SeasonicEPsu.cpp" />
+    <ClCompile Include="src\core\SmartDeviceV1.cpp" />
+    <ClCompile Include="src\core\TempMonitor.cpp" />
+    <ClCompile Include="src\ui\FanCurveWidget.cpp" />
+    <ClCompile Include="src\ui\MainWindow.cpp" />
+    <ClCompile Include="src\ui\Theme.cpp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="src\app\Settings.h" />
+    <ClInclude Include="src\MsvcCompat.h" />
+    <ClInclude Include="src\core\FanCurve.h" />
+    <ClInclude Include="src\core\HidDevice.h" />
+    <ClInclude Include="src\core\Pmbus.h" />
+    <ClInclude Include="src\core\SeasonicEPsu.h" />
+    <ClInclude Include="src\core\SmartDeviceV1.h" />
+    <ClInclude Include="src\core\TempMonitor.h" />
+    <ClInclude Include="src\core\Types.h" />
+    <ClInclude Include="src\ui\Theme.h" />
+  </ItemGroup>
+
+  <!-- Headers carrying Q_OBJECT. moc output lands in $(IntDir) and is pulled
+       into the matching .cpp with #include "moc_<Name>.cpp", so no generated
+       file has to be listed in the project. -->
+  <ItemGroup>
+    <CustomBuild Include="src\core\DeviceManager.h">
+      <FileType>Document</FileType>
+      <Message>moc DeviceManager.h</Message>
+      <Command>"$(QtDir)\bin\moc.exe" "%(FullPath)" -p core -o "$(IntDir)moc_%(Filename).cpp" -I"$(ProjectDir)src" -I"$(QtDir)\include"</Command>
+      <Outputs>$(IntDir)moc_%(Filename).cpp;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\ui\MainWindow.h">
+      <FileType>Document</FileType>
+      <Message>moc MainWindow.h</Message>
+      <Command>"$(QtDir)\bin\moc.exe" "%(FullPath)" -p ui -o "$(IntDir)moc_%(Filename).cpp" -I"$(ProjectDir)src" -I"$(QtDir)\include"</Command>
+      <Outputs>$(IntDir)moc_%(Filename).cpp;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\ui\FanCurveWidget.h">
+      <FileType>Document</FileType>
+      <Message>moc FanCurveWidget.h</Message>
+      <Command>"$(QtDir)\bin\moc.exe" "%(FullPath)" -p ui -o "$(IntDir)moc_%(Filename).cpp" -I"$(ProjectDir)src" -I"$(QtDir)\include"</Command>
+      <Outputs>$(IntDir)moc_%(Filename).cpp;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ResourceCompile Include="src\app.rc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="src\app.ico" />
+    <None Include="README.md" />
+    <None Include="docs\PROTOCOL_NOTES.md" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+
+  <!-- Fail early with a readable message instead of a wall of C1083 errors. -->
+  <Target Name="CheckQt" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(QtDir)\bin\moc.exe')"
+           Text="Qt was not found at '$(QtDir)'. Set the QTDIR environment variable to your Qt 5.14.2 msvc2017_64 folder, or edit the QtDir property in LiquidCam.vcxproj." />
+  </Target>
+
+</Project>
