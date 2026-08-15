@@ -117,6 +117,14 @@ void load(AppSettings& out)
     out.minDuty      = qBound(0, ini.value(QStringLiteral("minDuty"), 20).toInt(), 100);
     ini.endGroup();
 
+    ini.beginGroup(QStringLiteral("psu"));
+    out.psuFanMode  = static_cast<PsuFanMode>(
+        qBound(0, ini.value(QStringLiteral("fanMode"), 0).toInt(), 4));
+    out.psuFixedPct = qBound(20, ini.value(QStringLiteral("fixedPct"), 40).toInt(), 100);
+    out.psuCurve    = curveFromString(
+        ini.value(QStringLiteral("curve"), curveToString(FanCurve::silent())).toString());
+    ini.endGroup();
+
     ini.beginGroup(QStringLiteral("polling"));
     out.pollIntervalMs = qBound(250, ini.value(QStringLiteral("intervalMs"), 1000).toInt(), 10000);
     out.psuPollEvery   = qBound(1, ini.value(QStringLiteral("psuEvery"), 3).toInt(), 60);
@@ -159,6 +167,12 @@ void save(const AppSettings& in)
     ini.setValue(QStringLiteral("curveSource"), static_cast<int>(in.curveSource));
     ini.setValue(QStringLiteral("fallbackTemp"), in.fallbackTemp);
     ini.setValue(QStringLiteral("minDuty"), in.minDuty);
+    ini.endGroup();
+
+    ini.beginGroup(QStringLiteral("psu"));
+    ini.setValue(QStringLiteral("fanMode"),  int(in.psuFanMode));
+    ini.setValue(QStringLiteral("fixedPct"), in.psuFixedPct);
+    ini.setValue(QStringLiteral("curve"),    curveToString(in.psuCurve));
     ini.endGroup();
 
     ini.beginGroup(QStringLiteral("polling"));

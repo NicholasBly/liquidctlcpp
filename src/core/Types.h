@@ -158,6 +158,11 @@ struct PsuRail {
     float volts = 0.f, amps = 0.f, watts = 0.f;
 };
 
+// How the power supply fan is driven. Anything other than DeviceCurve means
+// LiquidCam is writing FAN_COMMAND_1 once a second; stop writing and the unit
+// falls back to its own curve on its own, which is the safe failure mode.
+enum class PsuFanMode { DeviceCurve = 0, Silent, Performance, Fixed, Custom };
+
 struct PsuStatus {
     bool                            present     = false;  // handle open
     bool                            connected   = false;  // last sweep produced data
@@ -165,6 +170,15 @@ struct PsuStatus {
     uint16_t                        fanRpm      = 0;
     std::array<PsuRail, kPsuRails>  rails       = {};
     float                           totalWatts  = 0.f;
+    // Two manufacturer-specific registers CAM polls every second. Identity not
+    // established - see docs/PROTOCOL_NOTES.md. Read and reported, not guessed at.
+    uint16_t                        mfrD3a      = 0;      // d3 01 01
+    uint16_t                        mfrD3b      = 0;      // d3 01 02
+    bool                            mfrD3Valid  = false;
+    uint32_t                        powerOnMinutes = 0;   // lifetime, from MFR 0xdc
+    bool                            powerOnValid  = false;
+    uint8_t                         commandedDuty = 0;    // what we last wrote
+    bool                            driving     = false;  // are we in control
     std::array<char, 24>            firmware    = {};
 };
 

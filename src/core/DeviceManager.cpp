@@ -131,8 +131,12 @@ void DeviceManager::threadMain()
         publish();
 
         const bool visible = uiVisible_.load(std::memory_order_relaxed);
-        const int  waitMs  = visible ? config_.pollIntervalMs
-                                     : config_.pollIntervalMs * config_.idleMultiplier;
+        int waitMs = visible ? config_.pollIntervalMs
+                             : config_.pollIntervalMs * config_.idleMultiplier;
+        // While we are driving the power supply fan the command has to be
+        // repeated about once a second, so the idle slowdown cannot apply.
+        if (config_.psuFanMode != PsuFanMode::DeviceCurve && waitMs > 1000)
+            waitMs = 1000;
 
         std::unique_lock<std::mutex> lock(queueMutex_);
         queueCv_.wait_for(lock, std::chrono::milliseconds(waitMs),
@@ -210,6 +214,8 @@ void DeviceManager::openDevices(bool force)
 
     if (!psu_.isOpen()) {
         if (psu_.open()) {
+            psu_.beginSession();
+            psuDutyWritten_ = -1;      // force a fresh command
             emitLog(QStringLiteral("Power supply connected."));
         } else {
             working_.psu = PsuStatus{};
@@ -250,9 +256,16 @@ void DeviceManager::pollDevices()
     }
 
     working_.psu.present = psu_.isOpen();
+    drivePsuFan();
     if (psu_.isOpen() && (tick_ % static_cast<uint32_t>(config_.psuPollEvery)) == 0) {
         if (psu_.poll(working_.psu)) {
             psuFailures_ = 0;
+            if (working_.psu.mfrD3Valid && !psuD3Logged_) {
+                psuD3Logged_ = true;
+                emitLog(QStringLiteral("Power supply 0xd3 registers: %1 and %2 "
+                                       "(not uptime; likely the per-rail OCP limits)")
+                            .arg(working_.psu.mfrD3a).arg(working_.psu.mfrD3b));
+            }
         } else {
             working_.psu.connected = false;
             // Say so once rather than every sweep, and carry the reason: the
@@ -329,6 +342,60 @@ void DeviceManager::driveFans()
                 refreshCountdown_[ch] = 5;
             }
         }
+    }
+}
+
+// The power supply hands the fan back to its own curve when the host stops
+// talking, so this runs every tick rather than on the telemetry cadence.
+// Doing nothing is always safe: the unit simply resumes its own control.
+void DeviceManager::drivePsuFan()
+{
+    if (!psu_.isOpen() || config_.psuFanMode == PsuFanMode::DeviceCurve) {
+        working_.psu.driving = false;
+        psuDutyWritten_ = -1;
+        return;
+    }
+
+    const float temp = working_.psu.temperature;
+    int duty = config_.psuFixedPct;
+    switch (config_.psuFanMode) {
+        case PsuFanMode::Silent:      duty = FanCurve::silent().eval(temp);      break;
+        case PsuFanMode::Performance: duty = FanCurve::performance().eval(temp); break;
+        case PsuFanMode::Custom:      duty = config_.psuCurve.eval(temp);        break;
+        case PsuFanMode::Fixed:       duty = config_.psuFixedPct;                break;
+        default: break;
+    }
+    duty = std::max(int(SeasonicEPsu::kMinFanDuty), std::min(100, duty));
+
+    // Failsafe. While LiquidCam is driving the fan, the unit is not running the
+    // curve it would otherwise use, so a quiet profile must not be able to hold
+    // the fan down through a heat problem. Above the threshold the requested
+    // duty is ignored entirely. The power supply's own over-temperature
+    // shutdown is untouched and remains the real backstop.
+    if (temp >= kPsuFanFullSpeedC) {
+        duty = 100;
+        if (!psuOverheatLogged_) {
+            psuOverheatLogged_ = true;
+            emitLog(QStringLiteral("Power supply reached %1 \u00B0C: fan forced to 100%% "
+                                   "until it cools below %2 \u00B0C.")
+                        .arg(double(temp), 0, 'f', 1).arg(kPsuFanReleaseC));
+        }
+    } else if (temp < kPsuFanReleaseC) {
+        psuOverheatLogged_ = false;
+    } else if (psuOverheatLogged_) {
+        duty = 100;                     // hysteresis, so it does not oscillate
+    }
+
+    // Re-send even when unchanged; this write is a keepalive, not an edge.
+    if (psu_.setFanDuty(static_cast<uint8_t>(duty))) {
+        working_.psu.driving = true;
+        working_.psu.commandedDuty = static_cast<uint8_t>(duty);
+        if (psuDutyWritten_ != duty) {
+            psuDutyWritten_ = duty;
+            emitLog(QStringLiteral("Power supply fan set to %1%.").arg(duty));
+        }
+    } else {
+        working_.psu.driving = false;
     }
 }
 

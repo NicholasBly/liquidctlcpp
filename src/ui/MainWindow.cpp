@@ -235,11 +235,13 @@ QWidget* MainWindow::buildHeader()
     readouts->setContentsMargins(0, 0, 0, 0);
     readouts->setSpacing(28);
 
+    QLabel* lastCaption = nullptr;
     auto addReadout = [&](const QString& caption, QLabel*& target, const QColor& color) {
         auto* column = new QVBoxLayout;
         column->setSpacing(1);
         auto* captionLabel = makeCaption(caption);
         captionLabel->setAlignment(Qt::AlignRight);
+        lastCaption = captionLabel;
         target = makeReadout(QStringLiteral("--"), 13, color);
         target->setAlignment(Qt::AlignRight);
         column->addWidget(captionLabel);
@@ -248,6 +250,7 @@ QWidget* MainWindow::buildHeader()
     };
 
     addReadout(QStringLiteral("CPU"),    headerSensor_, theme::kText);
+    headerSensorCaption_ = lastCaption;
     addReadout(QStringLiteral("FANS"),   headerRpm_,    theme::kText);
     addReadout(QStringLiteral("NOISE"),  headerNoise_,  theme::kTextMuted);
     addReadout(QStringLiteral("SYSTEM"), headerPower_,  theme::kGood);
@@ -511,12 +514,53 @@ QWidget* MainWindow::buildPowerPage()
     addMetric(QStringLiteral("Total output"), psuTotal_, QStringLiteral("--- W"), theme::kGood);
     addMetric(QStringLiteral("Temperature"),  psuTemp_,  QStringLiteral("--- \u00B0C"), theme::kText);
     addMetric(QStringLiteral("Fan"),          psuFan_,   QStringLiteral("--- rpm"), theme::kText);
+    addMetric(QStringLiteral("Power-on time"), psuHours_, QStringLiteral("---"), theme::kAccent);
     metrics->addStretch(1);
     summaryBody->addLayout(metrics);
 
     psuFirmware_ = makeCaption(QStringLiteral("Firmware --"));
     summaryBody->addWidget(psuFirmware_);
     layout->addWidget(summaryCard);
+
+    // --- fan control -----------------------------------------------------
+    QVBoxLayout* fanBody = nullptr;
+    auto* fanCard = makeCard(fanBody, QStringLiteral("Fan control"));
+
+    auto* fanRow = new QHBoxLayout;
+    fanRow->setSpacing(12);
+    fanRow->addWidget(makeCaption(QStringLiteral("Mode")));
+    psuFanMode_ = new QComboBox;
+    psuFanMode_->addItems({ QStringLiteral("Leave it to the power supply"),
+                            QStringLiteral("Silent"),
+                            QStringLiteral("Performance"),
+                            QStringLiteral("Fixed"),
+                            QStringLiteral("Custom curve") });
+    psuFanMode_->setCurrentIndex(int(settings_.psuFanMode));
+    fanRow->addWidget(psuFanMode_, 1);
+
+    fanRow->addWidget(makeCaption(QStringLiteral("Fixed speed")));
+    psuFixedPct_ = new QSpinBox;
+    psuFixedPct_->setRange(20, 100);
+    psuFixedPct_->setSuffix(QStringLiteral(" %"));
+    psuFixedPct_->setValue(settings_.psuFixedPct);
+    fanRow->addWidget(psuFixedPct_);
+    fanBody->addLayout(fanRow);
+
+    psuFanNote_ = makeCaption(QString());
+    psuFanNote_->setWordWrap(true);
+    fanBody->addWidget(psuFanNote_);
+    layout->addWidget(fanCard);
+
+    connect(psuFanMode_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int i) {
+        settings_.psuFanMode = static_cast<PsuFanMode>(i);
+        devices_->applyConfig(settings_);
+        saveTimer_->start();
+    });
+    connect(psuFixedPct_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int v) {
+        settings_.psuFixedPct = v;
+        devices_->applyConfig(settings_);
+        saveTimer_->start();
+    });
 
     QVBoxLayout* railBody = nullptr;
     QFrame* railCard = makeCard(railBody, QStringLiteral("Rails"));
@@ -918,13 +962,16 @@ void MainWindow::onSnapshot()
                         : snap.psu.present ? QStringLiteral("  Power supply: no reply")
                                            : QStringLiteral("  Power supply: not found"));
 
-    // Header readouts
-    if (settings_.curveSource == CurveSource::CpuLoad)
-        headerSensor_->setText(QStringLiteral("%1%").arg(qRound(snap.cpuLoadPct)));
-    else if (snap.tempValid)
+    // Header readouts. Most consumer boards do not publish an ACPI thermal
+    // zone, so rather than showing a dash forever, fall back to CPU load and
+    // relabel the column to match what is actually on screen.
+    if (settings_.curveSource != CurveSource::CpuLoad && snap.tempValid) {
+        headerSensorCaption_->setText(QStringLiteral("CPU"));
         headerSensor_->setText(QStringLiteral("%1\u00B0C").arg(snap.cpuTempC, 0, 'f', 1));
-    else
-        headerSensor_->setText(QStringLiteral("--"));
+    } else {
+        headerSensorCaption_->setText(QStringLiteral("CPU LOAD"));
+        headerSensor_->setText(QStringLiteral("%1%").arg(qRound(snap.cpuLoadPct)));
+    }
 
     int totalRpm = 0, active = 0;
     for (int ch = 0; ch < kFanChannels; ++ch) {
@@ -978,6 +1025,20 @@ void MainWindow::onSnapshot()
         psuFan_->setText(QStringLiteral("%1 rpm").arg(snap.psu.fanRpm));
         psuFirmware_->setText(QStringLiteral("Firmware %1")
                                   .arg(QString::fromLatin1(snap.psu.firmware.data())));
+        psuFanNote_->setText(snap.psu.driving
+            ? QStringLiteral("LiquidCam is holding the fan at %1%%. The command is re-sent "
+                             "every second; the power supply takes back control on its own "
+                             "if LiquidCam stops.").arg(snap.psu.commandedDuty)
+            : QStringLiteral("The power supply is running its own curve."));
+        if (snap.psu.powerOnValid) {
+            const uint32_t hours = snap.psu.powerOnMinutes / 60;
+            psuHours_->setText(QStringLiteral("%1d %2h").arg(hours / 24).arg(hours % 24));
+            psuHours_->setToolTip(QStringLiteral("%1 hours in total (%2 minutes), counted "
+                                                 "by the power supply itself.")
+                                      .arg(hours).arg(snap.psu.powerOnMinutes));
+        } else {
+            psuHours_->setText(QStringLiteral("---"));
+        }
         for (int i = 0; i < kPsuRails; ++i) {
             railVolts_[i]->setText(QStringLiteral("%1 V").arg(snap.psu.rails[i].volts, 0, 'f', 2));
             railAmps_[i]->setText(QStringLiteral("%1 A").arg(snap.psu.rails[i].amps, 0, 'f', 2));
@@ -993,6 +1054,7 @@ void MainWindow::onSnapshot()
         psuTotal_->setText(dash);
         psuTemp_->setText(dash);
         psuFan_->setText(dash);
+        psuHours_->setText(dash);
         psuFirmware_->setText(snap.psu.present
             ? QStringLiteral("Check the activity log in Preferences")
             : QString());

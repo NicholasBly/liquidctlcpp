@@ -12,6 +12,8 @@ enum Cmd : uint8_t {
     PAGE               = 0x00,
     PAGE_PLUS_READ     = 0x06,
     VOUT_MODE          = 0x20,
+    FAN_CONFIG_1_2     = 0x3A,
+    FAN_COMMAND_1      = 0x3B,   // the only register LiquidCam writes
     READ_VIN           = 0x88,
     READ_IIN           = 0x89,
     READ_VOUT          = 0x8B,

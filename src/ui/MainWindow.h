@@ -78,6 +78,7 @@ private:
     // --- chrome ------------------------------------------------------------
     QStackedWidget* pages_          = nullptr;
     QWidget*        headerReadouts_ = nullptr;
+    QLabel*         headerSensorCaption_ = nullptr;
     QLabel*         pageTitle_    = nullptr;
     QSystemTrayIcon* tray_        = nullptr;
     QTimer*         lightingTimer_ = nullptr;
@@ -123,6 +124,10 @@ private:
     QLabel* psuFan_      = nullptr;
     QLabel* psuTotal_    = nullptr;
     QLabel* psuFirmware_ = nullptr;
+    QLabel* psuHours_    = nullptr;
+    QComboBox* psuFanMode_  = nullptr;
+    QSpinBox*  psuFixedPct_ = nullptr;
+    QLabel*    psuFanNote_  = nullptr;
     std::array<QLabel*, kPsuRails> railVolts_{};
     std::array<QLabel*, kPsuRails> railAmps_{};
     std::array<QLabel*, kPsuRails> railWatts_{};

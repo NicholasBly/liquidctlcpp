@@ -28,6 +28,12 @@ struct AppSettings {
     int         fallbackTemp       = 45;   // used when no sensor is available
     int         minDuty            = 20;   // floor, so fans never fully stop
 
+    // Power supply fan. Off by default: taking control means taking
+    // responsibility for cooling it, so it is opt in.
+    PsuFanMode psuFanMode  = PsuFanMode::DeviceCurve;
+    int        psuFixedPct = 40;
+    FanCurve   psuCurve    = FanCurve::silent();
+
     // Polling
     int pollIntervalMs = 1000;
     int psuPollEvery   = 3;    // PSU sweep every N poll ticks

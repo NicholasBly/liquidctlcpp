@@ -67,6 +67,7 @@ private:
     void openDevices(bool force);
     void pollDevices();
     void driveFans();
+    void drivePsuFan();
     void publish();
 
     void emitLog(const QString& message);
@@ -94,6 +95,14 @@ private:
     int      reopenCooldown_ = 0;
     int      silentTicks_    = 0;   // consecutive polls with no status report
     int      psuFailures_    = 0;   // consecutive failed power supply sweeps
+    bool     psuD3Logged_    = false;
+    int      psuDutyWritten_ = -1;
+    bool     psuOverheatLogged_ = false;
+
+    // Hand the fan to full speed well before anything is at risk, and hold it
+    // there until the unit is properly cool again.
+    static constexpr float kPsuFanFullSpeedC = 60.0f;
+    static constexpr float kPsuFanReleaseC   = 52.0f;
 };
 
 } // namespace lc

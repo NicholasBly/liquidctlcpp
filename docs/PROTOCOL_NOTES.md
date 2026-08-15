@@ -172,6 +172,41 @@ digits>` - `0x41, 17` gives `A017`. The number CAM shows is that same string
 read back as hexadecimal, so `A017` becomes 40983. Treating the pair as a
 plain little-endian 16-bit value looks right on paper and is wrong.
 
+## What a capture of CAM shows
+
+A 45 second recording of CAM already running, decoded, contains reads and
+nothing else. Once per second CAM sends exactly this set:
+
+| Request | Meaning | Sample reply |
+| --- | --- | --- |
+| `ad 00 02 01 60 8e` | READ_TEMPERATURE_2 | `aa 02 23 00` -> 35.0 C |
+| `ad 00 02 01 60 90` | READ_FAN_SPEED_1 | `aa 02 fc 03 00` -> 1020 rpm |
+| `ad 00 04 04 60 06 02 <page> 8b` | READ_VOUT, pages 0-4 | `aa 04 02 f7 05 db 00` |
+| `ad 00 04 04 60 06 02 <page> 8c` | READ_IOUT, pages 0-4 | |
+| `ad 00 04 04 60 06 02 <page> 96` | READ_POUT, pages 0-4 | `aa 04 02 ec da ce 00` -> 23.4 W |
+| `ad 00 01 01 60 d2` | MFR 0xd2 | `aa 01 00` |
+| `ad 00 04 03 60 d3 01 01` | MFR 0xd3 index 1 | `aa 04 02 00 1e 62 00` |
+| `ad 00 04 03 60 d3 01 02` | MFR 0xd3 index 2 | `aa 04 02 00 2d 5d 00` |
+
+Three things follow.
+
+**The simple-read length is `dataLen`, not `dataLen + 1`.** CAM asks for two
+bytes and gets `aa 02 ...`. liquidctl sends one more; both work, but there is no
+reason to differ from the vendor.
+
+**The 0xd3 pair is unidentified.** Both held steady across the whole capture:
+`00 1e` and `00 2d`. Big-endian that is 30 and 45, little-endian 7680 and 11520.
+An hour meter would not have a zero low byte in both samples, so these are more
+likely the per-rail OCP limits CAM exposes for the CPU and GPU rails. LiquidCam
+reads and reports them without claiming to know which.
+
+**No writes at all**, across a window in which the fan mode was switched from
+Performance to Silent to Fixed in CAM's interface. So whatever changes the fan
+is not part of the steady-state loop. The fan spins up when CAM *connects*,
+which is the window that needs recording - and the first version of the capture
+script could not have seen it anyway, because it filtered frames by payload
+prefix and so kept only commands that were already known.
+
 ## Capturing what CAM sends
 
 `tools/Capture-PsuTraffic.ps1` records the conversation and decodes it. Run it
@@ -189,15 +224,100 @@ no need to guess at manufacturer-specific codes.
 Pausing between actions in CAM matters more than capture length. The gaps are
 what tie a frame to the thing that caused it.
 
-### Not available
+## Why writing 0x3b is defensible
 
-**Power-on hours.** PMBus has no standard command for it, and liquidctl's
-driver exposes nothing of the sort: its whole status list is temperature,
-fan speed, firmware, and the five rails. If the controller keeps an hour
-meter it would be behind one of the manufacturer-specific codes
-(`0xd0`-`0xff`), none of which have been mapped for this family. Reads of
-those codes are harmless, so a sweep of that range is the way to find out;
-writes to them are not, and should not be attempted casually.
+Worth setting out, because PMBus does contain registers that can do real harm.
+
+Dangerous by category, none of which this driver can reach:
+
+| Register | Risk |
+| --- | --- |
+| `OPERATION` 0x01 | switches a rail off; instant power loss |
+| `VOUT_COMMAND` 0x21 | changes an output voltage setpoint |
+| `VOUT_OV_FAULT_LIMIT` 0x40, `IOUT_OC_FAULT_LIMIT` 0x46, `OT_FAULT_LIMIT` 0x4f | move overvoltage, overcurrent and overtemperature trip points |
+| `STORE_DEFAULT_ALL` 0x11, `STORE_USER_ALL` 0x15 | commit settings to non-volatile memory, where a bad value survives a power cycle |
+
+The last row is the one that actually deserves the word "destroy". Everything
+else is recoverable by cutting power; a bad value written to NVM is not.
+
+What makes `FAN_COMMAND_1` different:
+
+- **It is not inferred.** NZXT's own software was captured writing
+  `ac 04 60 3b 26 00 77` to this exact model, once per second. LiquidCam emits
+  the identical frame. This is replay, not a guess at an unmapped register.
+- **It is volatile, demonstrably.** The controller returns to its own fan curve
+  within seconds of the host going quiet - the behaviour that started this
+  whole investigation. Nothing written here can outlive the process.
+- **The value is a duty percent, confirmed against reality.** 38 produces about
+  960 rpm on this unit, matching what CAM displays. It is not an RPM field
+  being misread.
+- **A malformed frame fails closed.** The PEC is checked by the controller, so
+  a corrupted write is rejected rather than misapplied.
+
+Enforced in code rather than by convention: `execWrite` refuses any command
+other than `FAN_COMMAND_1`, duty is clamped to 20-100 so the fan is never
+commanded to stop, and above 60 C the requested duty is discarded in favour of
+100% until the unit drops back under 52 C. The power supply's own
+over-temperature shutdown is untouched and remains the real backstop.
+
+The residual uncertainty is firmware behaviour nobody outside Seasonic can rule
+out. It is the same uncertainty you accept every time CAM is open.
+
+## Power-on time (solved)
+
+Lifetime run time in **minutes**, 32 bit little-endian, at bytes 43 to 46 of
+each `ae` chunk reply - past the reply's own declared byte count, not inside the
+0xdc block, which is almost entirely zeros.
+
+Read it the way CAM does: `af 00 ef 01 60 dc` opens the block, then `ae 01`
+through `ae 06` walk it. The counter is present in every chunk; the first is
+enough, but walking all six keeps the controller in the state it expects.
+
+Confirmed against CAM. Two captures a day apart read 2,179,180 and 2,179,878,
+and CAM displayed 1513D 20H shortly after the second. That is 36,332 hours, or
+2,179,920 minutes: 59.999 counter units per hour, and 42 minutes past the second
+capture. The gap between the captures, 698 minutes, is run time rather than
+wall-clock time, which is why it is shorter than the day that elapsed.
+
+The two `0xd3` registers are *not* this. They read 30 and 45 and never move,
+which fits the per-rail OCP limits CAM exposes for the CPU and GPU rails.
+LiquidCam still reports them once, labelled as unidentified.
+
+## Fan control (solved)
+
+Captured from CAM connecting. Two things were invisible before: writes use a
+different opcode from reads, and the first version of the capture script kept
+only frames beginning `0xad` or `0xaa`, so it discarded every one of them.
+
+CAM's connect sequence:
+
+```
+b0 01                       announce the host, sent once
+af 00 ef 01 60 dc           start a 239 byte block read of MFR command 0xdc
+ae 01 .. ae 06              fetch it in six chunks
+ac 04 60 3b 26 00 77        FAN_COMMAND_1 = 38, then repeated every second
+```
+
+The write frame is `[0xac][count][0x60][command][data...][pec]`, where the count
+covers everything after the address. The PEC is a standard PMBus packet error
+code: CRC-8, polynomial `x^8 + x^2 + x + 1`, taken over the address byte
+`0xc0` (0x60 shifted left, write bit clear) followed by the command and data.
+`3b 26 00` at address 0x60 gives `0x77`, matching the capture exactly.
+
+The value is a duty percentage in a little-endian 16-bit field. CAM sits at 38,
+which on this unit is roughly 960 rpm.
+
+**It is a keepalive, not a setting.** CAM re-sends it every second, and the
+controller returns the fan to its own curve when the host goes quiet. That is
+the whole explanation for the fan slowing down with CAM closed, and it makes
+stopping safe by construction: doing nothing hands cooling back to the unit.
+LiquidCam therefore re-sends on every tick and suppresses the idle slowdown
+while it is driving.
+
+`FAN_COMMAND_1` is the only register LiquidCam ever writes, and the duty is
+clamped to 20-100 so the fan is never commanded to stop.
+
+### Not available
 
 **Fan control.** CAM can change the E-series fan behaviour, but the command for it
 is not in liquidctl and guessing at PSU firmware writes is a poor trade. The

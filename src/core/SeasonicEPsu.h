@@ -17,6 +17,8 @@ class SeasonicEPsu {
 public:
     static constexpr uint16_t kVendorId = 0x7793;
 
+    static constexpr uint8_t kMinFanDuty = 20;   // never command the fan to stop
+
     static constexpr size_t kWriteLength = 64;
     static constexpr size_t kReadLength  = 64;
 
@@ -27,13 +29,34 @@ public:
     // One full telemetry sweep: temperature, fan, and all five rails.
     bool poll(PsuStatus& status);
 
+    // Announces the host, exactly as CAM does on connect (`b0 01`). Harmless
+    // to repeat.
+    bool beginSession();
+
+    // Writes FAN_COMMAND_1. duty is a percentage; the controller reaches
+    // roughly 960 rpm at 38, which is what CAM sits at.
+    //
+    // This is the only write LiquidCam ever performs. It has to be repeated
+    // about once a second: the controller hands the fan back to its own curve
+    // when the host stops talking, which is why the fan slows down when CAM is
+    // closed. Stopping is therefore safe by construction.
+    bool setFanDuty(uint8_t dutyPercent);
+
     const std::string& lastError() const { return lastError_; }
     const std::wstring& modelName() const { return model_; }
 
 private:
     // [0xad, writeLen, readLen, cmdLen, 0x60, <command bytes...>]
     bool execRead(uint8_t cmd, uint8_t dataLen, uint8_t* out);
+    // Block form: the reply carries its own byte count. Used by PAGE_PLUS_READ
+    // and by the manufacturer-specific 0xd3 reads.
+    bool execBlockRead(const uint8_t* cmd, uint8_t cmdLen, uint8_t dataLen, uint8_t* out);
     bool execPagePlusRead(uint8_t page, uint8_t cmd, uint8_t dataLen, uint8_t* out);
+    bool readMfrD3(PsuStatus& status);
+    bool readPowerOnMinutes(uint32_t& minutes);
+    int  uptimeCountdown_ = 0;
+    bool execWrite(uint8_t cmd, const uint8_t* data, uint8_t dataLen);
+    static uint8_t pec(uint8_t cmd, const uint8_t* data, uint8_t dataLen);
     bool transact(const uint8_t* msg, size_t len, uint8_t* response);
     void noteBadReply(const char* what);
 
