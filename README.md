@@ -20,7 +20,7 @@ Feel free to put in a request if this project looks useful to you, I'd love to a
 
 ## Why it is cheap on CPU
 
-MZXT CAM idles at a few percent of a core because it runs a Chromium process, polls
+NZXT CAM idles at a few percent of a core because it runs a Chromium process, polls
 on timers, and animates. LiquidCam is built the other way around:
 
 - **No third-party HID library.** The transport talks to `hid.dll` and
