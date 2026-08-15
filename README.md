@@ -1,20 +1,27 @@
 # LiquidCam
 
-A native C++17 replacement for NZXT CAM, built on the same device protocols as
+A native C++ replacement for NZXT CAM, built on the same device protocols as
 [liquidctl](https://github.com/liquidctl/liquidctl) and wrapped in a Qt widget
-interface that follows CAM's layout.
+interface that takes inspiration from CAM's layout.
 
-Targets exactly the hardware you have:
+I made this as a way to get rid of NZXT CAM, which is wildly expensive on the CPU. The main goal was to get PSU logging so that my PSU didn't ramp up to 100% every hour or so.
+LiquidCam sits between 8-12MB of RAM and 0% CPU while in the tray. When maximized, will sit between 0.1% and 0.5% CPU (tested on 7800X3D)
+
+Built using Claude Opus 5 Max, with additional fixes by me to improve code quality/safety.
+
+Targets exactly these hardware devices (version 1.0.0):
 
 | Device | USB ID | What LiquidCam does |
 | --- | --- | --- |
 | NZXT Smart Device V1 | `1e71:1714` | Fan speed control on all three channels, fan RPM / voltage / current / control mode, noise level, LED accessory detection, all 15 firmware lighting presets |
 | NZXT E850 | `7793:2500` | Temperature, fan speed, per-rail voltage / current / power, total output, firmware version (E500 `5911` and E650 `5912` are recognised too) |
 
+Feel free to put in a request if this project seems useful to you, I'd love to add more device compatibility!
+
 ## Why it is cheap on CPU
 
-CAM idles at a few percent of a core because it runs a Chromium process, polls
-on timers, and animates. LiquidCam is built the other way round:
+MZXT CAM idles at a few percent of a core because it runs a Chromium process, polls
+on timers, and animates. LiquidCam is built the other way around:
 
 - **No third-party HID library.** The transport talks to `hid.dll` and
   `setupapi.dll` directly with overlapped I/O. A read parks in the kernel until
@@ -38,7 +45,7 @@ with the PSU swept every third tick.
 ## Building
 
 Requirements: Windows 11, Visual Studio 2026 (or 2019/2022), and the Qt 5.14.2
-`msvc2017_64` build you already have installed.
+`msvc2017_64` build installed.
 
 1. Point the build at Qt. Either set an environment variable once:
 
